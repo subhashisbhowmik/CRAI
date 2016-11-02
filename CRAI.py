@@ -70,6 +70,9 @@ class Node:
                         self.val = cv
                         self.next_move = l[i]
                         self.next_node = child
+
+            # The following loop implements the alpha-beta pruning. Removing it will cause the algorithm to become
+            # a simpler MiniMax search. The loop does nothing but remove redundant options, improving the efficiency.
             for j in range(len(self.parents)):
                 if self.parents[j].mini is True and self.mini is False and self.parents[j].set:
                     if self.val > self.parents[j].val:
