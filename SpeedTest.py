@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/python
 __author__ = 'Subhashis'
 
 import Game
