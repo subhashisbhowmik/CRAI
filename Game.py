@@ -1,11 +1,10 @@
-#!/bin/sh
 __author__ = 'Subhashis'
 
 from copy import copy, deepcopy
 import random
 
 
-def _grid_play(grid, move, player_counts, moving_player, state):
+def _grid_play(grid, move, player_counts, player_points, moving_player, state):
     q = [move]
     while len(q) > 0 and state.winner == -1:
         move = q[0]
@@ -14,15 +13,31 @@ def _grid_play(grid, move, player_counts, moving_player, state):
             can_win = True
             if grid[move[0]][move[1]].is_full():
                 player_counts[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
+                player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
+                if grid[move[0]][move[1]].on_edge:
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.edge_points
+                if grid[move[0]][move[1]].on_corner:
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.corner_points
+
                 grid[move[0]][move[1]].value = 0
                 can_win = False
                 q += [(move[0] - 1, move[1]), (move[0], move[1] - 1), (move[0] + 1, move[1]),
                       (move[0], move[1] + 1)]
             else:
                 player_counts[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
+                player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
+                if grid[move[0]][move[1]].on_edge:
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.edge_points
+                if grid[move[0]][move[1]].on_corner:
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.corner_points
                 grid[move[0]][move[1]].value += 1
                 grid[move[0]][move[1]].player = moving_player
                 player_counts[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value
+                player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value
+                if grid[move[0]][move[1]].on_edge:
+                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * State.edge_points
+                if grid[move[0]][move[1]].on_corner:
+                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * State.corner_points
             if player_counts.count(0) == len(player_counts) - 1 and state.turn >= state.total_players and can_win:
                 for i in range(len(player_counts)):
                     if player_counts[i] > 0:
@@ -33,12 +48,14 @@ def _grid_play(grid, move, player_counts, moving_player, state):
 def new_instance(grid_size=(8, 8), player_count=2):
     grid = [[Square(grid_size, (i, j), 0, 0) for i in range(grid_size[0])] for j in range(grid_size[1])]
     player_counts = [0 for i in range(player_count)]
-    return State(grid, player_counts)
+    player_points = [0 for i in range(player_count)]
+    return State(grid, player_counts, player_points)
 
 
 def random_instance(grid_size=(8, 8), player_count=2):
     grid = []
     player_counts = [0 for i in range(player_count)]
+    player_points = [0 for i in range(player_count)]
     for i in range(grid_size[0]):
         row = []
         for j in range(grid_size[1]):
@@ -48,22 +65,30 @@ def random_instance(grid_size=(8, 8), player_count=2):
             if s.overflown():
                 s = Square(grid_size, (i, j), random.randrange(player_count), random.randrange(2))
             player_counts[s.player] += s.value
+            player_points[s.player] += s.value
+            if s.on_edge:
+                player_points[s.player] += s.value * State.edge_points
+            if s.on_corner:
+                player_points[s.player] += s.value * State.corner_points
+
             row.append(s)
         grid += [row]
-    return State(grid, player_counts, random.randrange(player_count))
+    return State(grid, player_counts, player_points, random.randrange(player_count))
 
 
 class State:
-    winner = -1
-    turn = 0
+    corner_points = 2
+    edge_points = 1
 
-    def __init__(self, grid, player_counts, current_player=0, turn=0, player_controllers=0, test=False):
+    def __init__(self, grid, player_counts, player_points, current_player=0, turn=0, player_controllers=0, test=False):
         self.gridSize = (len(grid[0]), len(grid))
         self.grid = grid
         self.total_players = len(player_counts)
         self.player_counts = player_counts
+        self.player_points = player_points
         self.turn = turn
         self.test = test
+        self.winner = -1
         self.current_player = current_player
         if player_controllers is 0:
             self.player_controllers = [0 for i in range(self.total_players)]
@@ -82,9 +107,11 @@ class State:
                     move[1]) + ").")
         grid = deepcopy(self.grid)
         player_counts = copy(self.player_counts)
-        _grid_play(grid, move, player_counts, moving_player, self)
+        player_points = copy(self.player_points)
+
+        _grid_play(grid, move, player_counts, player_points, moving_player, self)
         if self.winner < 0:
-            return State(grid, player_counts, test=test)
+            return State(grid, player_counts, player_points, test=test)
         else:
             return self
 
@@ -139,6 +166,7 @@ class State:
 
     def evaluate(self):
         # TODO: Update this evaluation with proper scoring for corner and edge values
+        # return 2 * self.player_points[self.current_player] - sum(self.player_points)
         return 2 * self.player_counts[self.current_player] - sum(self.player_counts)
 
     def random_move(self):
@@ -179,7 +207,8 @@ class State:
 
     def deep_print(self):
         string = "\nGrid Size: " + str(self.gridSize) + "\nTotal Players: " + str(
-            self.total_players) + "\nPlayer Scores: " + str(self.player_counts) + "\nTurn No.: " + str(
+            self.total_players) + "\nPlayer Scores: " + str(self.player_counts) + "\nPlayer Points:" + str(
+            self.player_points) + "\nTurn No.: " + str(
             self.turn) + "\nCurrent Player: " + str(self.current_player) + "\n\nGrid:\n\n"
         string += self.__str__()
         print string
@@ -192,7 +221,7 @@ class Square:
         self.grid_size = grid_size
         self.position = position
         self.on_corner = self.is_on_corner()
-        self.on_side = self.is_on_side()
+        self.on_edge = self.is_on_edge()
         self.on_middle = self.is_on_middle()
 
     def is_empty(self):
@@ -208,7 +237,7 @@ class Square:
         else:
             return False
 
-    def is_on_side(self):
+    def is_on_edge(self):
         if (self.position[0] == 0 or self.position[1] == 0 or self.position[0] == self.grid_size[0] - 1 or
                     self.position[1] == self.grid_size[1] - 1) and not self.is_on_corner():
             return True
@@ -216,7 +245,7 @@ class Square:
             return False
 
     def is_on_middle(self):
-        if not self.is_on_corner() and not self.is_on_side():
+        if not self.is_on_corner() and not self.is_on_edge():
             return True
         else:
             return False
@@ -224,7 +253,7 @@ class Square:
     def is_full(self):
         if self.on_corner and self.value >= 1:
             return True
-        if self.on_side and self.value >= 2:
+        if self.on_edge and self.value >= 2:
             return True
         if self.value >= 3:
             return True
@@ -233,7 +262,7 @@ class Square:
     def overflown(self):
         if self.on_corner and self.value >= 2:
             return True
-        if self.on_side and self.value >= 3:
+        if self.on_edge and self.value >= 3:
             return True
         if self.value >= 4:
             return True

@@ -1,4 +1,3 @@
-#!/bin/sh
 __author__ = 'Subhashis'
 
 import random

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/python
 __author__ = 'Subhashis'
 
 import Game
@@ -10,7 +10,7 @@ max_depth = 3
 
 state = Game.new_instance(grid_size, total_players)
 
-# state.register_controller(CRAI.CRAIController(max_depth), 0) # Uncomment this line to play CPU v/s CPU.
-state.register_controller(CRAI.CRAIController(max_depth), 1) # For all human players, Comment out this line.
+# state.register_controller(CRAI.CRAIController(max_depth), 0)  # Uncomment this line to play CPU v/s CPU.
+state.register_controller(CRAI.CRAIController(max_depth), 1)  # For all human players, Comment out this line.
 
 state.run()
