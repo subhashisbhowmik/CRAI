@@ -15,9 +15,9 @@ def _grid_play(grid, move, player_counts, player_points, moving_player, state):
                 player_counts[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
                 player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
                 if grid[move[0]][move[1]].on_edge:
-                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.edge_points
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * ChainReactionState.edge_points
                 if grid[move[0]][move[1]].on_corner:
-                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.corner_points
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * ChainReactionState.corner_points
 
                 grid[move[0]][move[1]].value = 0
                 can_win = False
@@ -27,17 +27,17 @@ def _grid_play(grid, move, player_counts, player_points, moving_player, state):
                 player_counts[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
                 player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value
                 if grid[move[0]][move[1]].on_edge:
-                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.edge_points
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * ChainReactionState.edge_points
                 if grid[move[0]][move[1]].on_corner:
-                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * State.corner_points
+                    player_points[grid[move[0]][move[1]].player] -= grid[move[0]][move[1]].value * ChainReactionState.corner_points
                 grid[move[0]][move[1]].value += 1
                 grid[move[0]][move[1]].player = moving_player
                 player_counts[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value
                 player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value
                 if grid[move[0]][move[1]].on_edge:
-                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * State.edge_points
+                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * ChainReactionState.edge_points
                 if grid[move[0]][move[1]].on_corner:
-                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * State.corner_points
+                    player_points[grid[move[0]][move[1]].player] += grid[move[0]][move[1]].value * ChainReactionState.corner_points
             if player_counts.count(0) == len(player_counts) - 1 and state.turn >= state.total_players and can_win:
                 for i in range(len(player_counts)):
                     if player_counts[i] > 0:
@@ -49,7 +49,7 @@ def new_instance(grid_size=(8, 8), player_count=2):
     grid = [[Square(grid_size, (i, j), 0, 0) for i in range(grid_size[0])] for j in range(grid_size[1])]
     player_counts = [0 for i in range(player_count)]
     player_points = [0 for i in range(player_count)]
-    return State(grid, player_counts, player_points)
+    return ChainReactionState(grid, player_counts, player_points)
 
 
 def random_instance(grid_size=(8, 8), player_count=2):
@@ -67,16 +67,36 @@ def random_instance(grid_size=(8, 8), player_count=2):
             player_counts[s.player] += s.value
             player_points[s.player] += s.value
             if s.on_edge:
-                player_points[s.player] += s.value * State.edge_points
+                player_points[s.player] += s.value * ChainReactionState.edge_points
             if s.on_corner:
-                player_points[s.player] += s.value * State.corner_points
+                player_points[s.player] += s.value * ChainReactionState.corner_points
 
             row.append(s)
         grid += [row]
-    return State(grid, player_counts, player_points, random.randrange(player_count))
+    return ChainReactionState(grid, player_counts, player_points, random.randrange(player_count))
 
 
-class State:
+class GameState:
+    def __init__(self):
+        pass
+
+    def evaluate(self):
+        raise NotImplementedError("Evaluate method must be implemented.")
+
+    def move(self, move, test=False):
+        raise NotImplementedError("Move method must be implemented.")
+
+    def all_moves(self):
+        raise NotImplementedError("All_moves method must be implemented.")
+
+    def is_valid_move(self):
+        raise NotImplementedError("Is_valid_move method must be implemented.")
+
+    def run(self):
+        raise NotImplementedError("run method must be implemented.")
+
+
+class ChainReactionState(GameState):
     corner_points = 2
     edge_points = 1
 
@@ -111,7 +131,7 @@ class State:
 
         _grid_play(grid, move, player_counts, player_points, moving_player, self)
         if self.winner < 0:
-            return State(grid, player_counts, player_points, test=test)
+            return ChainReactionState(grid, player_counts, player_points, test=test)
         else:
             return self
 
